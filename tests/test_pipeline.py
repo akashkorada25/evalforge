@@ -148,6 +148,7 @@ def test_cli_end_to_end(tmp_path):
     assert main(["--db", db, "run", str(SUITE), "--baseline", base]) == 0
     assert main(["--db", db, "compare", "latest", "latest"]) == 0
     assert main(["--db", db, "list"]) == 0
+    assert main(["--db", db, "failures", "latest", "--limit", "3"]) == 0
 
 
 def test_cli_gate_fails_on_regression(tmp_path):

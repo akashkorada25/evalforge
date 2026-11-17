@@ -34,7 +34,7 @@ judge:
   provider: anthropic
   model: claude-sonnet-5-5
   params:
-    max_tokens: 200
+    max_tokens: 1024
   cost_per_1m:
     input: 2.0
     output: 10.0

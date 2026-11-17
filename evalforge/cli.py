@@ -120,6 +120,34 @@ def cmd_compare(args) -> int:
     return 0 if cmp["passed_gate"] else 1
 
 
+def cmd_failures(args) -> int:
+    store = Store(args.db)
+    run = store.get_run(args.run_id)
+    failed = [r for r in store.load_results(run["id"]) if not r.passed]
+    if args.combo:
+        failed = [r for r in failed if args.combo in r.combo]
+    print(f"Run {run['id']}: {len(failed)} failing results\n")
+    reasons: dict[str, int] = {}
+    for r in failed:
+        for c in r.checks:
+            if not c["passed"]:
+                key = f"{c['type']}: {c['reason'][:80]}" if c["type"] != "llm_judge" else "llm_judge: score below threshold"
+                reasons[key] = reasons.get(key, 0) + 1
+    print("Most common failure reasons:")
+    for reason, n in sorted(reasons.items(), key=lambda x: -x[1])[:10]:
+        print(f"  {n:>3} x {reason}")
+    print()
+    for r in failed[: args.limit]:
+        print(f"- {r.case_id} [{r.combo}] score {r.score:.2f}")
+        if r.error:
+            print(f"    error: {r.error[:200]}")
+        for c in r.checks:
+            if not c["passed"]:
+                print(f"    {c['type']}: {c['reason'][:200]}")
+        print(f"    output: {r.output[:args.chars]!r}")
+    return 0
+
+
 def cmd_report(args) -> int:
     store = Store(args.db)
     run = store.get_run(args.run_id)
@@ -186,6 +214,13 @@ def main(argv=None) -> int:
     c.add_argument("--max-drop", type=float, default=0.05)
     c.add_argument("--report")
     c.set_defaults(fn=cmd_compare)
+
+    fl = sub.add_parser("failures", help="Show why cases failed in a stored run")
+    fl.add_argument("run_id", nargs="?", default="latest")
+    fl.add_argument("--combo", help="Only show combinations containing this text")
+    fl.add_argument("--limit", type=int, default=20)
+    fl.add_argument("--chars", type=int, default=240, help="Characters of output to show")
+    fl.set_defaults(fn=cmd_failures)
 
     rp = sub.add_parser("report", help="Build an HTML dashboard for a stored run")
     rp.add_argument("run_id")

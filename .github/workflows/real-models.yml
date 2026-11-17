@@ -40,6 +40,10 @@ jobs:
             --json-summary results/claude-summary.json \
             --save-baseline results/claude-baseline.json | tee results/claude-output.txt
 
+      - name: Show failing cases
+        if: always()
+        run: evalforge failures latest --limit 30 | tee results/claude-failures.txt
+
       - name: Add leaderboard to the job summary
         if: always()
         run: |
