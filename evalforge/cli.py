@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -56,6 +57,20 @@ def cmd_run(args) -> int:
     run = store.get_run(run_id)
     print(f"\nRun {run_id}\n")
     print(_table(summarize(results)))
+    errors = sorted({f"[{r.provider_id}] {r.error}" for r in results if r.error})
+    if errors:
+        print(f"\n{sum(1 for r in results if r.error)} calls failed. Distinct errors:")
+        for e in errors[:5]:
+            print(f"  {e[:300]}")
+    judge_errors = sorted({c["reason"][:200] for r in results for c in r.checks
+                           if c["type"] == "llm_judge" and c["reason"].startswith("Judge error")})
+    if judge_errors:
+        print("\nJudge errors:")
+        for e in judge_errors[:3]:
+            print(f"  {e}")
+    if args.json_summary:
+        Path(args.json_summary).write_text(json.dumps(
+            {"run_id": run_id, "suite": suite.name, "summary": summarize(results)}, indent=2))
 
     comparison = None
     if args.baseline:
@@ -158,6 +173,7 @@ def main(argv=None) -> int:
     r.add_argument("--max-drop", type=float, default=0.05, help="Allowed drop in mean score (0-1)")
     r.add_argument("--min-pass-rate", type=float, help="Fail if any combination's pass rate is below this")
     r.add_argument("--note", help="Free-text note stored with the run")
+    r.add_argument("--json-summary", help="Write the leaderboard as JSON to this path")
     r.set_defaults(fn=cmd_run)
 
     ls = sub.add_parser("list", help="List recent runs")

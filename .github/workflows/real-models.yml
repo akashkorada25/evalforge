@@ -1,0 +1,56 @@
+name: Real-model eval (Claude)
+
+# Runs the suite against real Anthropic models. Needs the ANTHROPIC_API_KEY repository secret.
+# Runs when the Claude suite or this workflow changes, or manually from the Actions tab.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "suites/support_summaries_claude.yaml"
+      - ".github/workflows/real-models.yml"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+
+      - name: Check the API key is configured
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret is not set. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Run evaluation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p results
+          evalforge run suites/support_summaries_claude.yaml \
+            --concurrency 4 --retries 5 \
+            --report results/claude-report.html \
+            --json-summary results/claude-summary.json \
+            --save-baseline results/claude-baseline.json | tee results/claude-output.txt
+
+      - name: Add leaderboard to the job summary
+        if: always()
+        run: |
+          echo '## Claude model evaluation' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat results/claude-output.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-eval-results
+          path: results/
