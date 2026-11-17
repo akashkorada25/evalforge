@@ -72,3 +72,8 @@ def test_parse_judge_formats():
 def test_llm_judge_without_judge_fails():
     r = run_check({"type": "llm_judge"}, "x", case(), {"judge": None})
     assert not r.passed
+
+
+def test_check_name_defaults_to_type_and_can_be_set():
+    assert run_check({"type": "contains", "value": "a"}, "a", case(), {}).name == "contains"
+    assert run_check({"type": "contains", "value": "a", "name": "mentions-a"}, "a", case(), {}).name == "mentions-a"

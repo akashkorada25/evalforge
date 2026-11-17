@@ -36,6 +36,7 @@ class CheckResult:
     score: float
     passed: bool
     reason: str
+    name: str = ""  # optional label from the suite, e.g. "faithful", to tell checks of one type apart
 
     def to_dict(self):
         return asdict(self)
@@ -279,10 +280,13 @@ CHECKS = {
 
 def run_check(check: dict, output: str, case, ctx: dict) -> CheckResult:
     kind = check.get("type")
+    name = str(check.get("name") or kind)
     fn = CHECKS.get(kind)
     if fn is None:
-        return CheckResult(str(kind), 0.0, False, f"Unknown check type '{kind}'")
+        return CheckResult(str(kind), 0.0, False, f"Unknown check type '{kind}'", name)
     try:
-        return fn(check, output or "", case, ctx)
+        result = fn(check, output or "", case, ctx)
     except Exception as e:  # noqa: BLE001
-        return CheckResult(kind, 0.0, False, f"Check error: {e}")
+        result = CheckResult(kind, 0.0, False, f"Check error: {e}")
+    result.name = name
+    return result

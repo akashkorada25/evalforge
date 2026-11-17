@@ -131,7 +131,8 @@ def cmd_failures(args) -> int:
     for r in failed:
         for c in r.checks:
             if not c["passed"]:
-                key = f"{c['type']}: {c['reason'][:80]}" if c["type"] != "llm_judge" else "llm_judge: score below threshold"
+                label = c.get("name") or c["type"]
+                key = f"{label}: {c['reason'][:80]}" if c["type"] != "llm_judge" else f"{label}: judge score below threshold"
                 reasons[key] = reasons.get(key, 0) + 1
     print("Most common failure reasons:")
     for reason, n in sorted(reasons.items(), key=lambda x: -x[1])[:10]:
@@ -143,7 +144,7 @@ def cmd_failures(args) -> int:
             print(f"    error: {r.error[:200]}")
         for c in r.checks:
             if not c["passed"]:
-                print(f"    {c['type']}: {c['reason'][:200]}")
+                print(f"    {c.get('name') or c['type']}: {c['reason'][:200]}")
         print(f"    output: {r.output[:args.chars]!r}")
     return 0
 

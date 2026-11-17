@@ -58,7 +58,7 @@ function render(){
     ${(r.metadata&&r.metadata.sources&&r.metadata.sources.length)?`<div class="muted">Retrieved: ${esc(r.metadata.sources.join(' · '))}</div>`:''}
     <pre>${esc(r.output)}</pre>
     <ul class="checks">${r.checks.map(c=>`<li><span class="${c.passed?'good':'bad'}">${c.passed?'✓':'✗'}</span>
-      <b>${esc(c.type)}</b> (${c.score.toFixed(2)}): ${esc(c.reason)}</li>`).join('')}</ul></details>`).join('');
+      <b>${esc(c.name||c.type)}</b> (${c.score.toFixed(2)}): ${esc(c.reason)}</li>`).join('')}</ul></details>`).join('');
 }
 ['#f-combo','#f-tag','#f-status'].forEach(s=>$(s).addEventListener('change',render));
 $('#f-q').addEventListener('input',render); render();
