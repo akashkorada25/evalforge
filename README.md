@@ -43,7 +43,8 @@ evalforge failures latest      # why each case failed
 ## Features
 
 - **Multi-provider runner:** OpenAI (and any OpenAI-compatible API), Anthropic, local models through Ollama, and built-in mock models so everything runs with no API keys. Calls run in parallel, with retries and exponential backoff on rate limits.
-- **8 check types:** exact match, contains, not contains, regex, JSON schema validation, word limit, similarity to a reference answer, and LLM-as-judge with a rubric.
+- **9 check types:** exact match, contains, not contains, regex, JSON schema validation, word limit, similarity to a reference answer, LLM-as-judge with a rubric, and `sources` (did a RAG system retrieve the right documents?).
+- **Evaluate whole systems, not just model calls (v0.2):** the `python` provider calls your own function, such as a RAG pipeline, and records the sources and context it retrieved. The judge can then grade **faithfulness**: whether the answer is supported by the retrieved passages. See [pydocs-rag](https://github.com/akashkorada25/pydocs-rag) for a full example.
 - **Tracking:** every run is stored in SQLite with outputs, scores, latency, token counts, cost and git commit.
 - **HTML dashboard:** a leaderboard, a quality vs cost chart, scores by tag, a baseline comparison, and a searchable case explorer. It's one self-contained file you can open anywhere.
 - **CI regression gate:** a GitHub Action that runs the suite on every pull request and fails if any model/prompt's mean score drops more than a set threshold below the committed baseline.
@@ -160,13 +161,35 @@ cases:
 
 Each case's score is the average of its check scores (0–1). A case passes only if every check passes.
 
+### Evaluating a RAG system (or any Python function)
+
+```yaml
+providers:
+  - id: hybrid
+    provider: python
+    model: "myapp.rag:answer"          # module:function
+    params: {retriever: hybrid, k: 5}  # passed to the function as keyword arguments
+default_checks:
+  - type: llm_judge                    # faithfulness: is every claim supported by the retrieved passages?
+    include_context: true
+    use_reference: false
+    rubric: "Every claim in the answer is supported by the CONTEXT."
+cases:
+  - id: default-args
+    vars: {question: "When are default argument values evaluated?"}
+    checks:
+      - {type: sources, value: ["tutorial/controlflow"]}   # retrieved the right page
+```
+
+The function is called as `answer(prompt, system=None, **params)` and returns a string, or a dict with `text` and optionally `input_tokens`, `output_tokens`, `cost_usd` and `metadata` (for example `{"sources": [...], "context": [...]}`).
+
 ## Project structure
 
 ```
 evalforge/
   providers.py    OpenAI, Anthropic, Ollama and mock models; token and cost tracking
   config.py       suite loading, validation and template rendering
-  scorers.py      the 8 check types and the LLM judge
+  scorers.py      the 9 check types and the LLM judge
   runner.py       parallel execution, retries, aggregation (p50/p95 latency, pass rate)
   storage.py      SQLite run history
   compare.py      baselines and regression detection
@@ -175,7 +198,7 @@ evalforge/
   cli.py          command-line interface
 suites/           example test suites (mock models and real Claude models)
 data/             human-labelled judge calibration set
-tests/            27 pytest tests
+tests/            33 pytest tests
 ```
 
 ## Run the tests
@@ -187,7 +210,6 @@ pytest -q
 ## Ideas for next steps
 
 - Use real embedding models for the similarity check
-- RAG metrics: context precision/recall and faithfulness to retrieved documents
 - A tracing decorator that logs production LLM calls and turns failures into new test cases
 - Repeat each case several times to measure output variance and flaky cases
 

@@ -27,6 +27,7 @@ class Result:
     judge_cost_usd: float = 0.0
     checks: list[dict] = field(default_factory=list)
     error: str | None = None
+    metadata: dict = field(default_factory=dict)
 
     @property
     def combo(self) -> str:
@@ -57,7 +58,7 @@ def _evaluate(provider, judge, prompt_spec, case, suite: Suite, retries: int, ba
         return Result(case.id, provider.id, prompt_spec.id, case.tags, "", 0.0, False, 0.0, 0, 0, 0.0,
                       error=str(e))
 
-    ctx = {"judge": judge}
+    ctx = {"judge": judge, "metadata": comp.metadata or {}}
     checks = [run_check(c, comp.text, case, ctx) for c in (suite.default_checks + case.checks)]
     score = sum(c.score for c in checks) / len(checks) if checks else 0.0
     passed = bool(checks) and all(c.passed for c in checks)
@@ -75,6 +76,7 @@ def _evaluate(provider, judge, prompt_spec, case, suite: Suite, retries: int, ba
         cost_usd=comp.cost_usd,
         judge_cost_usd=ctx.get("judge_cost", 0.0),
         checks=[c.to_dict() for c in checks],
+        metadata=comp.metadata or {},
     )
 
 

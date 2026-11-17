@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS results (
     cost_usd REAL,
     judge_cost_usd REAL,
     checks TEXT,
-    error TEXT
+    error TEXT,
+    metadata TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_results_run ON results(run_id);
 """
@@ -56,6 +57,9 @@ class Store:
         self.conn = sqlite3.connect(path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(results)")}
+        if "metadata" not in cols:  # databases created by v0.1
+            self.conn.execute("ALTER TABLE results ADD COLUMN metadata TEXT")
 
     def save_run(self, suite_name: str, suite_path: str, results: list[Result], note: str = "") -> str:
         run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
@@ -66,10 +70,11 @@ class Store:
                  _git_sha(), note),
             )
             self.conn.executemany(
-                "INSERT INTO results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 [(run_id, r.case_id, r.provider_id, r.prompt_id, json.dumps(r.tags), r.output, r.score,
                   int(r.passed), r.latency_ms, r.input_tokens, r.output_tokens, r.cost_usd,
-                  r.judge_cost_usd, json.dumps(r.checks), r.error) for r in results],
+                  r.judge_cost_usd, json.dumps(r.checks), r.error, json.dumps(r.metadata or {}))
+                 for r in results],
             )
         return run_id
 
@@ -100,6 +105,7 @@ class Store:
                 passed=bool(r["passed"]), latency_ms=r["latency_ms"], input_tokens=r["input_tokens"],
                 output_tokens=r["output_tokens"], cost_usd=r["cost_usd"], judge_cost_usd=r["judge_cost_usd"],
                 checks=json.loads(r["checks"] or "[]"), error=r["error"],
+                metadata=json.loads(r["metadata"] or "{}"),
             )
             for r in rows
         ]

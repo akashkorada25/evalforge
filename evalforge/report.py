@@ -55,6 +55,7 @@ function render(){
     <span class="muted" style="margin-left:auto">score ${r.score.toFixed(2)} · ${Math.round(r.latency_ms)} ms</span></summary>
     ${r.error?`<p class="bad">Error: ${esc(r.error)}</p>`:''}
     <div class="muted">Tags: ${esc(r.tags.join(', ')||'none')}</div>
+    ${(r.metadata&&r.metadata.sources&&r.metadata.sources.length)?`<div class="muted">Retrieved: ${esc(r.metadata.sources.join(' · '))}</div>`:''}
     <pre>${esc(r.output)}</pre>
     <ul class="checks">${r.checks.map(c=>`<li><span class="${c.passed?'good':'bad'}">${c.passed?'✓':'✗'}</span>
       <b>${esc(c.type)}</b> (${c.score.toFixed(2)}): ${esc(c.reason)}</li>`).join('')}</ul></details>`).join('');

@@ -8,7 +8,12 @@ Check types (used in suite files under `checks` or `default_checks`):
   json_schema    output is valid JSON matching a small schema (`schema`)
   max_words      output has at most `value` words
   similarity     cosine similarity to the case's `expected` is at least `threshold`
-  llm_judge      a judge model grades the output 1-5 against `rubric`; passes at `threshold`
+  llm_judge      a judge model grades the output 1-5 against `rubric`; passes at `threshold`.
+                 `include_context: true` shows the judge the passages a RAG system retrieved
+                 (metadata["context"]), for faithfulness checks; `use_reference: false` hides
+                 the expected answer from the judge.
+  sources        the provider's metadata["sources"] includes the strings in `value`
+                 (`mode: any` by default, or `all`); for checking what a RAG system retrieved
 """
 from __future__ import annotations
 
@@ -174,20 +179,38 @@ INPUT:
 
 REFERENCE:
 <<REFERENCE>>[[REFERENCE]]<</REFERENCE>>
-
+[[CONTEXT_BLOCK]]
 RESPONSE:
 <<RESPONSE>>[[RESPONSE]]<</RESPONSE>>
 
 Reply with JSON only, in this form: {"score": <integer 1-5>, "reason": "<one sentence>"}"""
 
 
-def build_judge_prompt(rubric: str, input_text: str, reference: str | None, response: str) -> str:
+CONTEXT_BLOCK = """
+CONTEXT (the passages the system retrieved and was told to answer from):
+<<CONTEXT>>[[CONTEXT]]<</CONTEXT>>
+"""
+
+
+def build_judge_prompt(rubric: str, input_text: str, reference: str | None, response: str,
+                       context: str | None = None) -> str:
+    block = CONTEXT_BLOCK.replace("[[CONTEXT]]", context) if context is not None else ""
+    # The context block goes in before the response is substituted, so text inside the
+    # response can never be mistaken for a template placeholder.
     return (
-        JUDGE_TEMPLATE.replace("[[RUBRIC]]", rubric)
+        JUDGE_TEMPLATE.replace("[[CONTEXT_BLOCK]]", block)
+        .replace("[[RUBRIC]]", rubric)
         .replace("[[INPUT]]", input_text)
         .replace("[[REFERENCE]]", reference or "")
         .replace("[[RESPONSE]]", response)
     )
+
+
+def _context_text(metadata: dict) -> str:
+    ctx = (metadata or {}).get("context", "")
+    if isinstance(ctx, list):
+        return "\n\n".join(str(c) for c in ctx)
+    return str(ctx)
 
 
 def parse_judge(text: str) -> tuple[int, str]:
@@ -210,8 +233,10 @@ def check_llm_judge(check, output, case, ctx):
         return CheckResult("llm_judge", 0.0, False, "No judge configured in the suite")
     threshold = int(check.get("threshold", 4))
     input_text = "\n".join(f"{k}: {v}" for k, v in case.vars.items())
+    reference = case.expected if check.get("use_reference", True) else None
+    context = _context_text(ctx.get("metadata", {})) if check.get("include_context") else None
     prompt = build_judge_prompt(check.get("rubric", "Is the response correct and helpful?"),
-                                input_text, case.expected, output)
+                                input_text, reference, output, context)
     try:
         completion = judge.complete(prompt)
         score, reason = parse_judge(completion.text)
@@ -223,6 +248,22 @@ def check_llm_judge(check, output, case, ctx):
     return CheckResult("llm_judge", (score - 1) / 4, ok, f"Judge {score}/5: {reason}")
 
 
+def check_sources(check, output, case, ctx):
+    sources = [str(s).lower() for s in (ctx.get("metadata", {}) or {}).get("sources", [])]
+    wanted = _as_list(check.get("value"))
+    if not wanted:
+        return CheckResult("sources", 0.0, False, "No expected sources given")
+    found = [w for w in wanted if any(w.lower() in s for s in sources)]
+    if check.get("mode", "any") == "all":
+        ok = len(found) == len(wanted)
+        score = len(found) / len(wanted)
+    else:
+        ok = bool(found)
+        score = float(ok)
+    reason = f"Found {found}" if ok else f"Expected {wanted} in retrieved sources {sources[:5]}"
+    return CheckResult("sources", score, ok, reason)
+
+
 CHECKS = {
     "exact": check_exact,
     "contains": check_contains,
@@ -232,6 +273,7 @@ CHECKS = {
     "max_words": check_max_words,
     "similarity": check_similarity,
     "llm_judge": check_llm_judge,
+    "sources": check_sources,
 }
 
 

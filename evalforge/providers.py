@@ -22,6 +22,8 @@ class Completion:
     output_tokens: int = 0
     latency_ms: float = 0.0
     cost_usd: float = 0.0
+    # Extra data a provider wants to record, e.g. the sources and context a RAG system retrieved.
+    metadata: dict = field(default_factory=dict)
 
 
 class ProviderError(Exception):
@@ -208,11 +210,58 @@ class MockProvider(Provider):
             m = re.search(rf"<<{tag}>>(.*?)<</{tag}>>", prompt, re.S)
             return m.group(1).strip() if m else ""
 
-        response, reference = between("RESPONSE"), between("REFERENCE")
+        response, reference = between("RESPONSE"), between("REFERENCE") or between("CONTEXT")
         sim = cosine_similarity(response, reference) if reference else 0.6
         noise = rng.choice([-1, 0, 0, 0, 1])  # judges are noisy
         score = min(5, max(1, round(1 + sim * 4) + noise))
         return json.dumps({"score": score, "reason": f"Mock judge: similarity to reference {sim:.2f}."})
+
+
+class PythonProvider(Provider):
+    """Calls your own Python function, so you can evaluate a whole system (for example a RAG
+    pipeline) rather than a single model call.
+
+    `model` is "package.module:function". The function is called as
+    fn(prompt, system=None, **params) and returns either a string, or a dict with
+    "text" and optionally "input_tokens", "output_tokens", "cost_usd" and "metadata".
+    Put whatever later checks need in metadata, e.g. {"sources": [...], "context": "..."}.
+    """
+
+    _cache: dict = {}
+
+    def _function(self):
+        if self.model not in self._cache:
+            if ":" not in self.model:
+                raise ProviderError(f"Python provider model must look like 'module:function', got {self.model!r}")
+            module_name, fn_name = self.model.split(":", 1)
+            import importlib
+
+            try:
+                module = importlib.import_module(module_name)
+                self._cache[self.model] = getattr(module, fn_name)
+            except (ImportError, AttributeError) as e:
+                raise ProviderError(f"Cannot import {self.model}: {e}") from e
+        return self._cache[self.model]
+
+    def complete(self, prompt, system=None, reference=None):
+        fn = self._function()
+        start = time.perf_counter()
+        try:
+            out = fn(prompt, system=system, **self.params)
+        except ProviderError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            raise ProviderError(f"{type(e).__name__}: {e}", retryable=bool(getattr(e, "retryable", False))) from e
+        latency_ms = (time.perf_counter() - start) * 1000
+        if isinstance(out, str):
+            out = {"text": out}
+        in_tok, out_tok = int(out.get("input_tokens", 0)), int(out.get("output_tokens", 0))
+        if "cost_usd" in out:
+            cost = float(out["cost_usd"])
+        else:
+            rates = self.cost_per_1m or {}
+            cost = (in_tok * rates.get("input", 0) + out_tok * rates.get("output", 0)) / 1_000_000
+        return Completion(str(out.get("text", "")), in_tok, out_tok, latency_ms, cost, dict(out.get("metadata") or {}))
 
 
 PROVIDERS = {
@@ -220,6 +269,7 @@ PROVIDERS = {
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
     "ollama": OllamaProvider,
+    "python": PythonProvider,
 }
 
 
