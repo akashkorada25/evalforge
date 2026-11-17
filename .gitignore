@@ -1,0 +1,29 @@
+# Python build and cache files
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local run history and generated reports (regenerate any time)
+.evalforge/
+*.db
+report.html
+eval-report.html
+
+# Secrets: API keys must never be committed
+.env
+.env.*
+!.env.example
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

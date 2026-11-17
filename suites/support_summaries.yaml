@@ -1,0 +1,173 @@
+# Which model + prompt best turns customer support tickets into structured triage data?
+#
+# Runs with no API keys using the built-in mock models. To use real models, uncomment the
+# providers below, set the API key environment variables, and fill in current prices.
+
+name: Support ticket triage
+description: Summarize a support ticket into JSON with summary, category and priority.
+
+providers:
+  - id: strong
+    provider: mock
+    model: mock-strong
+  - id: balanced
+    provider: mock
+    model: mock-balanced
+  - id: fast
+    provider: mock
+    model: mock-fast
+  # - id: gpt-4o-mini
+  #   provider: openai
+  #   model: gpt-4o-mini
+  #   params: {temperature: 0}
+  #   cost_per_1m: {input: 0.15, output: 0.60}    # check current pricing
+  # - id: claude-haiku
+  #   provider: anthropic
+  #   model: claude-haiku-4-5
+  #   params: {temperature: 0, max_tokens: 400}
+  #   cost_per_1m: {input: 1.00, output: 5.00}    # check current pricing
+  # - id: llama-local
+  #   provider: ollama
+  #   model: llama3.1:8b
+
+judge:
+  id: judge
+  provider: mock
+  model: mock-strong
+  # provider: openai
+  # model: gpt-4o
+  # params: {temperature: 0}
+
+prompts:
+  - id: v1-basic
+    template: |
+      Summarize this support ticket as JSON with the keys "summary", "category" and "priority".
+
+      Ticket:
+      {ticket}
+  - id: v2-structured
+    system: |
+      You are a support triage assistant. Reply with a single JSON object and nothing else.
+      - summary: one sentence, at most 25 words, with the concrete facts (amounts, order numbers, errors).
+      - category: one of billing, technical, account, shipping, other.
+      - priority: one of low, medium, high, urgent. Use urgent for outages, security issues or
+        a customer who cannot use the product at all.
+    template: |
+      Ticket:
+      {ticket}
+
+default_checks:
+  - type: json_schema
+    schema:
+      type: object
+      required: [summary, category, priority]
+      properties:
+        summary: {type: string}
+        category: {type: string, enum: [billing, technical, account, shipping, other]}
+        priority: {type: string, enum: [low, medium, high, urgent]}
+  - type: llm_judge
+    threshold: 4
+    rubric: >
+      The summary is accurate and keeps the concrete facts from the ticket (amounts, order
+      numbers, error messages). Category and priority are correct. No invented details.
+
+cases:
+  - id: double-charge
+    tags: [billing]
+    vars:
+      ticket: "Hi, I was charged $49.99 twice for my March subscription. Please refund the duplicate charge."
+    expected: '{"summary": "Customer was charged $49.99 twice for the March subscription and wants the duplicate refunded.", "category": "billing", "priority": "medium"}'
+    checks:
+      - {type: contains, value: ["49.99", "twice"]}
+      - {type: regex, pattern: '"category"\s*:\s*"billing"'}
+
+  - id: site-down
+    tags: [technical, urgent]
+    vars:
+      ticket: "Your dashboard has been returning 502 errors for the last hour. Our whole team is blocked!!"
+    expected: '{"summary": "Dashboard has returned 502 errors for an hour and the whole team is blocked.", "category": "technical", "priority": "urgent"}'
+    checks:
+      - {type: contains, value: ["502"]}
+      - {type: regex, pattern: '"priority"\s*:\s*"urgent"'}
+
+  - id: password-reset
+    tags: [account]
+    vars:
+      ticket: "I never receive the password reset email. I checked spam. My email is on the account settings page."
+    expected: '{"summary": "Customer does not receive the password reset email, including in spam.", "category": "account", "priority": "medium"}'
+    checks:
+      - {type: contains, value: ["password reset"]}
+
+  - id: late-package
+    tags: [shipping]
+    vars:
+      ticket: "Order #A-77812 was supposed to arrive on Monday. Tracking hasn't updated in 6 days."
+    expected: '{"summary": "Order #A-77812 was due Monday but tracking has not updated in 6 days.", "category": "shipping", "priority": "medium"}'
+    checks:
+      - {type: contains, value: ["A-77812"]}
+
+  - id: security-concern
+    tags: [account, urgent]
+    vars:
+      ticket: "I got a login alert from Brazil and I have never been there. Someone may be in my account."
+    expected: '{"summary": "Customer received a login alert from Brazil and suspects unauthorized account access.", "category": "account", "priority": "urgent"}'
+    checks:
+      - {type: regex, pattern: '"priority"\s*:\s*"urgent"'}
+      - {type: contains, value: ["Brazil"]}
+
+  - id: feature-request
+    tags: [other, low-priority]
+    vars:
+      ticket: "Would love a dark mode for the mobile app. Not urgent, just a suggestion!"
+    expected: '{"summary": "Customer suggests adding a dark mode to the mobile app.", "category": "other", "priority": "low"}'
+    checks:
+      - {type: contains, value: ["dark mode"]}
+      - {type: regex, pattern: '"priority"\s*:\s*"low"'}
+
+  - id: angry-refund
+    tags: [billing, edge-case]
+    vars:
+      ticket: "THIS IS RIDICULOUS. I cancelled in January and you STILL billed me $120 for February. Refund me NOW."
+    expected: '{"summary": "Customer cancelled in January but was billed $120 for February and demands a refund.", "category": "billing", "priority": "high"}'
+    checks:
+      - {type: contains, value: ["120", "February"]}
+
+  - id: multi-issue
+    tags: [technical, edge-case]
+    vars:
+      ticket: "Two things: the CSV export times out on files over 10MB, and also the invoice PDF shows the wrong company name."
+    expected: '{"summary": "CSV export times out on files over 10MB, and the invoice PDF shows the wrong company name.", "category": "technical", "priority": "medium"}'
+    checks:
+      - {type: contains, value: ["CSV", "10MB", "invoice"]}
+
+  - id: spanish-ticket
+    tags: [shipping, edge-case, non-english]
+    vars:
+      ticket: "Hola, mi pedido #B-2290 llegó dañado. La caja estaba rota y el producto no funciona."
+    expected: '{"summary": "Order #B-2290 arrived damaged with a broken box and the product does not work.", "category": "shipping", "priority": "high"}'
+    checks:
+      - {type: contains, value: ["B-2290"]}
+
+  - id: vague-ticket
+    tags: [other, edge-case]
+    vars:
+      ticket: "it doesnt work"
+    expected: '{"summary": "Customer reports that something does not work but gives no details.", "category": "other", "priority": "low"}'
+    checks:
+      - {type: not_contains, value: ["login", "payment", "refund"]}
+
+  - id: api-rate-limit
+    tags: [technical]
+    vars:
+      ticket: "We're getting HTTP 429 from the /v2/orders endpoint at only 20 requests per minute. Docs say the limit is 100."
+    expected: '{"summary": "API returns HTTP 429 on /v2/orders at 20 requests per minute though docs state a limit of 100.", "category": "technical", "priority": "high"}'
+    checks:
+      - {type: contains, value: ["429", "/v2/orders"]}
+
+  - id: plan-downgrade
+    tags: [billing, account]
+    vars:
+      ticket: "How do I downgrade from the Team plan to Pro at the end of my billing cycle?"
+    expected: '{"summary": "Customer asks how to downgrade from the Team plan to Pro at the end of the billing cycle.", "category": "billing", "priority": "low"}'
+    checks:
+      - {type: contains, value: ["Team", "Pro"]}

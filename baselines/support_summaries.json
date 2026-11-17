@@ -1,0 +1,336 @@
+{
+  "combos": {
+    "balanced | v1-basic": {
+      "cases": {
+        "angry-refund": {
+          "passed": true,
+          "score": 1.0
+        },
+        "api-rate-limit": {
+          "passed": true,
+          "score": 1.0
+        },
+        "double-charge": {
+          "passed": true,
+          "score": 0.9375
+        },
+        "feature-request": {
+          "passed": true,
+          "score": 1.0
+        },
+        "late-package": {
+          "passed": false,
+          "score": 0.0
+        },
+        "multi-issue": {
+          "passed": true,
+          "score": 1.0
+        },
+        "password-reset": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "plan-downgrade": {
+          "passed": false,
+          "score": 0.5833
+        },
+        "security-concern": {
+          "passed": false,
+          "score": 0.0
+        },
+        "site-down": {
+          "passed": true,
+          "score": 1.0
+        },
+        "spanish-ticket": {
+          "passed": true,
+          "score": 1.0
+        },
+        "vague-ticket": {
+          "passed": true,
+          "score": 1.0
+        }
+      },
+      "cost_usd": 0.000581,
+      "mean_score": 0.7865,
+      "pass_rate": 0.75
+    },
+    "balanced | v2-structured": {
+      "cases": {
+        "angry-refund": {
+          "passed": true,
+          "score": 1.0
+        },
+        "api-rate-limit": {
+          "passed": true,
+          "score": 1.0
+        },
+        "double-charge": {
+          "passed": true,
+          "score": 0.9375
+        },
+        "feature-request": {
+          "passed": true,
+          "score": 1.0
+        },
+        "late-package": {
+          "passed": true,
+          "score": 1.0
+        },
+        "multi-issue": {
+          "passed": true,
+          "score": 1.0
+        },
+        "password-reset": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "plan-downgrade": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "security-concern": {
+          "passed": true,
+          "score": 1.0
+        },
+        "site-down": {
+          "passed": true,
+          "score": 1.0
+        },
+        "spanish-ticket": {
+          "passed": true,
+          "score": 1.0
+        },
+        "vague-ticket": {
+          "passed": true,
+          "score": 1.0
+        }
+      },
+      "cost_usd": 0.00096,
+      "mean_score": 0.9809,
+      "pass_rate": 1.0
+    },
+    "fast | v1-basic": {
+      "cases": {
+        "angry-refund": {
+          "passed": true,
+          "score": 1.0
+        },
+        "api-rate-limit": {
+          "passed": true,
+          "score": 1.0
+        },
+        "double-charge": {
+          "passed": true,
+          "score": 0.9375
+        },
+        "feature-request": {
+          "passed": false,
+          "score": 0.4375
+        },
+        "late-package": {
+          "passed": false,
+          "score": 0.6667
+        },
+        "multi-issue": {
+          "passed": false,
+          "score": 0.6667
+        },
+        "password-reset": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "plan-downgrade": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "security-concern": {
+          "passed": false,
+          "score": 0.375
+        },
+        "site-down": {
+          "passed": true,
+          "score": 1.0
+        },
+        "spanish-ticket": {
+          "passed": true,
+          "score": 1.0
+        },
+        "vague-ticket": {
+          "passed": true,
+          "score": 1.0
+        }
+      },
+      "cost_usd": 7.3e-05,
+      "mean_score": 0.8264,
+      "pass_rate": 0.6667
+    },
+    "fast | v2-structured": {
+      "cases": {
+        "angry-refund": {
+          "passed": true,
+          "score": 1.0
+        },
+        "api-rate-limit": {
+          "passed": true,
+          "score": 1.0
+        },
+        "double-charge": {
+          "passed": false,
+          "score": 0.375
+        },
+        "feature-request": {
+          "passed": true,
+          "score": 1.0
+        },
+        "late-package": {
+          "passed": true,
+          "score": 1.0
+        },
+        "multi-issue": {
+          "passed": true,
+          "score": 1.0
+        },
+        "password-reset": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "plan-downgrade": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "security-concern": {
+          "passed": true,
+          "score": 1.0
+        },
+        "site-down": {
+          "passed": false,
+          "score": 0.375
+        },
+        "spanish-ticket": {
+          "passed": true,
+          "score": 1.0
+        },
+        "vague-ticket": {
+          "passed": true,
+          "score": 1.0
+        }
+      },
+      "cost_usd": 0.000116,
+      "mean_score": 0.8819,
+      "pass_rate": 0.8333
+    },
+    "strong | v1-basic": {
+      "cases": {
+        "angry-refund": {
+          "passed": true,
+          "score": 1.0
+        },
+        "api-rate-limit": {
+          "passed": true,
+          "score": 1.0
+        },
+        "double-charge": {
+          "passed": true,
+          "score": 0.9375
+        },
+        "feature-request": {
+          "passed": false,
+          "score": 0.0625
+        },
+        "late-package": {
+          "passed": true,
+          "score": 1.0
+        },
+        "multi-issue": {
+          "passed": true,
+          "score": 1.0
+        },
+        "password-reset": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "plan-downgrade": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "security-concern": {
+          "passed": true,
+          "score": 1.0
+        },
+        "site-down": {
+          "passed": false,
+          "score": 0.0625
+        },
+        "spanish-ticket": {
+          "passed": true,
+          "score": 1.0
+        },
+        "vague-ticket": {
+          "passed": true,
+          "score": 1.0
+        }
+      },
+      "cost_usd": 0.00378,
+      "mean_score": 0.8247,
+      "pass_rate": 0.8333
+    },
+    "strong | v2-structured": {
+      "cases": {
+        "angry-refund": {
+          "passed": true,
+          "score": 1.0
+        },
+        "api-rate-limit": {
+          "passed": true,
+          "score": 1.0
+        },
+        "double-charge": {
+          "passed": true,
+          "score": 0.9375
+        },
+        "feature-request": {
+          "passed": true,
+          "score": 1.0
+        },
+        "late-package": {
+          "passed": true,
+          "score": 1.0
+        },
+        "multi-issue": {
+          "passed": true,
+          "score": 1.0
+        },
+        "password-reset": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "plan-downgrade": {
+          "passed": true,
+          "score": 0.9167
+        },
+        "security-concern": {
+          "passed": true,
+          "score": 1.0
+        },
+        "site-down": {
+          "passed": true,
+          "score": 1.0
+        },
+        "spanish-ticket": {
+          "passed": true,
+          "score": 1.0
+        },
+        "vague-ticket": {
+          "passed": true,
+          "score": 1.0
+        }
+      },
+      "cost_usd": 0.005998,
+      "mean_score": 0.9809,
+      "pass_rate": 1.0
+    }
+  },
+  "created_at": "2026-11-17T16:10:32+00:00",
+  "suite": "Support ticket triage"
+}
